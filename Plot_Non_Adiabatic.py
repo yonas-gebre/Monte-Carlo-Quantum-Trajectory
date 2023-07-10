@@ -1,175 +1,155 @@
 import numpy as np
 import sys
-import matplotlib
 import matplotlib.pyplot as plt
-# from mpl_toolkits import mplot3d
-matplotlib.use('TkAgg')
-from numpy import pi, sqrt
-# from matplotlib.image import NonUniformImage
 from matplotlib.colors import LogNorm
-# from functools import reduce
-# from matplotlib.colors import LinearSegmentedColormap
-from scipy.signal import find_peaks 
+from scipy.signal import find_peaks
 import os
 import gc
 
-os.environ.update({"QT_QPA_PLATFORM_PLUGIN_PATH": "~/anaconda3/envs/research-headless/lib/python3.8/site-packages/PyQt5/Qt5/plugins/xcbglintegrations/libqxcb-glx-integration.so"})
+# Set environment variable
+os.environ.update(
+    {"QT_QPA_PLATFORM_PLUGIN_PATH": "~/anaconda3/envs/research-headless/lib/python3.8/site-packages/PyQt5/Qt5/plugins/xcbglintegrations/libqxcb-glx-integration.so"})
 
 
-cdict1 = {'red':   ((0.0, 0.0, 0.0),
-                (0.5, 0.0, 0.1),
-                (1.0, 1.0, 1.0)),
-
-        'green': ((0.0, 0.0, 0.0),
-                (1.0, 0.0, 0.0)),
-
-        'blue':  ((0.0, 0.0, 1.0),
-                (0.5, 0.1, 0.0),
-                (1.0, 0.0, 0.0))
-    }
-# blue_red1 = LinearSegmentedColormap('BlueRed1',
-#                                 cdict1)
-    
 def PAD(major_axis_passed, minor_axis_passed, propagation_axis_passed, phase_array_passed, plot_name):
-    
     resolution = 0.01
     x_momentum = np.arange(-1.5, 1.5 + resolution, resolution)
     y_momentum = np.arange(-1.5, 1.5 + resolution, resolution)
     y_momentum = np.flip(y_momentum)
-    
     z_momentum = np.arange(-1.5, 1.5 + resolution, resolution)
-    # z_momentum = np.array([0])
 
-    pad_value = np.zeros((y_momentum.size,x_momentum.size))
-    
+    pad_value = np.zeros((y_momentum.size, x_momentum.size))
+
     for i, px in enumerate(x_momentum):
-        
-        print(round(px,3))
-        first_idx = np.where(np.logical_and(major_axis_passed >= px - resolution/2, major_axis_passed<= px+(resolution/2)))[0]
+        print(round(px, 3))
+        # Select major axis values within the specified range
+        first_idx = np.where(np.logical_and(
+            major_axis_passed >= px - resolution/2, major_axis_passed <= px + (resolution/2)))[0]
         minor_axis_temp = minor_axis_passed[first_idx]
         propagation_axis_temp = propagation_axis_passed[first_idx]
         phase_temp = phase_array_passed[first_idx]
-        
 
-        for j, py in enumerate(y_momentum):   
-                
-            second_idx = np.where(np.logical_and(minor_axis_temp >= py - resolution/2, minor_axis_temp <= py + resolution/2 ))[0]
+        for j, py in enumerate(y_momentum):
+            # Select minor axis values within the specified range
+            second_idx = np.where(np.logical_and(
+                minor_axis_temp >= py - resolution/2, minor_axis_temp <= py + resolution/2))[0]
             propagation_axis_temp_two = propagation_axis_temp[second_idx]
             phase_temp_two = phase_temp[second_idx]
 
-
             for l, pz in enumerate(z_momentum):
-            
-                third_idx = np.where(np.logical_and(propagation_axis_temp_two >= pz - resolution/2, propagation_axis_temp_two <= pz + resolution/2 ))[0]    
-                phase = phase_temp_two[third_idx] 
-                value = np.exp(-1.0j*phase)
+                # Select propagation axis values within the specified range
+                third_idx = np.where(np.logical_and(
+                    propagation_axis_temp_two >= pz - resolution/2, propagation_axis_temp_two <= pz + resolution/2))[0]
+                phase = phase_temp_two[third_idx]
+                value = np.exp(-1.0j * phase)
                 value = np.sum(value)
-            
-                pad_value[j, i] += np.absolute(value)**2
-            
+
+                pad_value[j, i] += np.absolute(value) ** 2
+
     pad_value = pad_value / pad_value.max() + 1e-12
-    pos = plt.imshow(pad_value, cmap='jet', extent=[-1.5, 1.5, -1.5, 1.5],norm=LogNorm(vmin=pow(10, -3), vmax=1))
+    pos = plt.imshow(pad_value, cmap='jet',
+                     extent=[-1.5, 1.5, -1.5, 1.5], norm=LogNorm(vmin=pow(10, -3), vmax=1))
 
     plt.xlabel(r'$P_{x}$')
     plt.ylabel(r'$P_{y}$')
     plt.tight_layout()
     plt.colorbar(pos)
-    plt.grid(color = "cyan")
+    plt.grid(color="cyan")
     plt.savefig(plot_name)
-    # plt.show()
-   
     plt.clf()
-    
-def PAD_Angular_Two(Final_K, Final_Phi, Final_Thetha, phase_array):
-    
-    resolution = 0.05
-    
-    angle_small, angle_large = -270, 450
-    phi_array = np.arange(angle_small*2*pi/360, angle_large*2*pi/360, 0.05)
-    
-    energy_max = 20
-    energy_array = np.arange(0, energy_max/27.21, 0.005)
-    phi_array = np.flip(phi_array)
-    
-    phi_array += 4*pi
-    theta_array = np.arange(pi/2 - 0.15, pi/2 + 0.15 + 0.005, 0.005)
+    # plt.show()
 
-    pad_value = np.zeros((phi_array.size,energy_array.size))
-    pad_value_assymetry = np.zeros((phi_array.size,energy_array.size))
+
+def PAD_Angular_Two(Final_K, Final_Phi, Final_Thetha, phase_array):
+    resolution = 0.05
+
+    angle_small, angle_large = -270, 450
+    phi_array = np.arange(angle_small * 2 * np.pi / 360,
+                          angle_large * 2 * np.pi / 360, 0.05)
+
+    energy_max = 20
+    energy_array = np.arange(0, energy_max / 27.21, 0.005)
+    phi_array = np.flip(phi_array)
+
+    phi_array += 4 * np.pi
+    theta_array = np.arange(np.pi / 2 - 0.15, np.pi / 2 + 0.15 + 0.005, 0.005)
+
+    pad_value = np.zeros((phi_array.size, energy_array.size))
+    pad_value_assymetry = np.zeros((phi_array.size, energy_array.size))
 
     for i, energy in enumerate(energy_array):
-        print(round(energy,3))
-        k = sqrt(2*energy)
+        print(round(energy, 3))
+        k = np.sqrt(2 * energy)
 
-        k_axis_idx = np.where(np.logical_and(Final_K >= k - resolution/2, Final_K <= k + resolution/2 ))[0]
+        k_axis_idx = np.where(np.logical_and(
+            Final_K >= k - resolution / 2, Final_K <= k + resolution / 2))[0]
         Final_Phi_temp = Final_Phi[k_axis_idx]
         Final_Thetha_temp = Final_Thetha[k_axis_idx]
         phase_array_temp = phase_array[k_axis_idx]
 
-        for j, phi in enumerate(phi_array):           
-            
-            phi_two = phi + pi
-            
-            phi = phi%(2*pi)
-            phi_two = phi_two%(2*pi)
-           
+        for j, phi in enumerate(phi_array):
+            phi_two = phi + np.pi
+            phi = phi % (2 * np.pi)
+            phi_two = phi_two % (2 * np.pi)
 
-            phi_axis_idx = np.where(np.logical_and(Final_Phi_temp >= phi - resolution/2, Final_Phi_temp <= phi + (resolution/2)))[0]
+            phi_axis_idx = np.where(np.logical_and(
+                Final_Phi_temp >= phi - resolution / 2, Final_Phi_temp <= phi + (resolution / 2)))[0]
             Final_Thetha_temp_two = Final_Thetha_temp[phi_axis_idx]
             phase_array_temp_two = phase_array_temp[phi_axis_idx]
 
-            phi_axis_idx_B = np.where(np.logical_and(Final_Phi_temp >= phi_two - resolution/2, Final_Phi_temp <= phi_two + (resolution/2)))[0]
+            phi_axis_idx_B = np.where(np.logical_and(
+                Final_Phi_temp >= phi_two - resolution / 2, Final_Phi_temp <= phi_two + (resolution / 2)))[0]
             Final_Thetha_temp_two_B = Final_Thetha_temp[phi_axis_idx_B]
             phase_array_temp_two_B = phase_array_temp[phi_axis_idx_B]
 
             pad_assymetry_value = 0.0
 
-            for l, theta in enumerate(theta_array):  
-            
-                theta_axis_idx = np.where(np.logical_and(Final_Thetha_temp_two >= theta - resolution/2, Final_Thetha_temp_two <= theta + resolution/2 ))[0]
+            for l, theta in enumerate(theta_array):
+                theta_axis_idx = np.where(np.logical_and(
+                    Final_Thetha_temp_two >= theta - resolution / 2, Final_Thetha_temp_two <= theta + resolution / 2))[0]
                 phase = phase_array_temp_two[theta_axis_idx]
 
-                value = np.exp(-1.0j*phase)
+                value = np.exp(-1.0j * phase)
                 value = np.sum(value)
-                value = np.absolute(value)**2
+                value = np.absolute(value) ** 2
                 pad_value[j, i] += value
 
-                
-                theta_axis_idx = np.where(np.logical_and(Final_Thetha_temp_two_B >= theta - resolution/2, Final_Thetha_temp_two_B <= theta + resolution/2 ))[0]
+                theta_axis_idx = np.where(np.logical_and(
+                    Final_Thetha_temp_two_B >= theta - resolution / 2, Final_Thetha_temp_two_B <= theta + resolution / 2))[0]
                 phase = phase_array_temp_two_B[theta_axis_idx]
 
-                value_two = np.exp(-1.0j*phase)
+                value_two = np.exp(-1.0j * phase)
                 value_two = np.sum(value_two)
-                value_two = np.absolute(value_two)**2
+                value_two = np.absolute(value_two) ** 2
 
-                pad_assymetry_value += (value - value_two)/(value + value_two + 1e-16)
-           
-            pad_value_assymetry[j, i] += pad_assymetry_value/len(theta_array)
+                pad_assymetry_value += (value - value_two) / \
+                    (value + value_two + 1e-16)
 
-    
+            pad_value_assymetry[j, i] += pad_assymetry_value / len(theta_array)
+
     pad_value = pad_value / pad_value.max() + 1e-16
     plt.rcParams.update({'font.size': 16})
 
-    pos = plt.imshow(pad_value, cmap='bwr',extent=[0, energy_max, angle_small, angle_large], aspect='auto', norm=LogNorm(vmin=pow(10, -3), vmax=1))
+    pos = plt.imshow(pad_value, cmap='bwr', extent=[
+                     0, energy_max, angle_small, angle_large], aspect='auto', norm=LogNorm(vmin=pow(10, -3), vmax=1))
     plt.xlabel(r'$E_{kin}$')
     plt.ylabel(r'$\phi_{abs}(deg)$')
     plt.tight_layout()
-    # plt.set_cmap('bwr') 
     plt.colorbar(pos)
     plt.savefig("PAD400_Angular_Ell_Pulse_102.png")
-
     plt.clf()
-    
-    pos = plt.imshow(pad_value_assymetry, cmap='bwr', extent=[0, energy_max, angle_small, angle_large], vmin=-1, vmax=1,  aspect='auto')
+
+    pos = plt.imshow(pad_value_assymetry, cmap='bwr', extent=[
+                     0, energy_max, angle_small, angle_large], vmin=-1, vmax=1, aspect='auto')
     print(np.absolute(pad_value_assymetry).max())
     plt.xlabel(r'$E_{kin}$')
     plt.ylabel(r'$\phi_{abs}(deg)$')
     plt.tight_layout()
-    # plt.set_cmap('bwr') 
     plt.colorbar(pos)
     plt.savefig("PAD400_Assym_Ell_Pulse_102.png")
     plt.clf()
-    
+
+
 def PAD_Asym_At_90(Final_K, Final_Phi, Final_Thetha, phase_array):
     
     resolution = 0.01
@@ -582,115 +562,56 @@ def Single_ATI_Peak_Plots(Final_Phi, Final_Thetha, phase_array, x_array, x_array
     
 if __name__ == "__main__":
     
-    
-
-    major_axis, minor_axis, propagation_axis = [], [], []   
+        
+    file_name_location = "/mpdata/becker/yoge8051/Research/TDSE/Monte_Carlo/Data/Circular/New/500nm/Plus3"
 
     phase_array = []
     v_paral = []
     v_perp = []
 
-    file_name_location = "/mpdata/becker/yoge8051/Research/TDSE/Monte_Carlo/Data/Circular/New/500nm/Plus3"
-
-    #354
-    for file_no in range(132):
-
+    for file_no in range(200):
         print("file", file_no)
-        # if file_no in [49] :
-        #     continue
 
-        if file_no in range(49, 49 + 24):
-            continue
+        file_name = file_name_location + "/Phase_" + str(file_no) + ".npy"
+        phase_array.extend(np.load(file_name))
 
-        ###########################################################################################
-        file_name = file_name_location + "/Phase_" + str(file_no)+ ".npy"   
-        PH = np.load(file_name)
-        # continue
-        phase_array += list(PH)
+        file_name = file_name_location + \
+            "/Final_Mom_X_Axis_" + str(file_no) + ".npy"
+        v_paral.extend(np.load(file_name))
 
-        file_name = file_name_location + "/Final_Mom_X_Axis_" + str(file_no)+ ".npy"
-        MA_A = np.load(file_name)        
-        major_axis += list(MA_A)
-        
-        file_name = file_name_location + "/Final_Mom_Y_Axis_" + str(file_no)+ ".npy"
-        MI_A = np.load(file_name)
-        minor_axis += list(MI_A)
-        
-        file_name = file_name_location + "/Final_Mom_Z_Axis_" + str(file_no)+ ".npy"
-        PR_A = np.load(file_name)
-        propagation_axis += list(PR_A)
-
-
-        file_name = file_name_location + "/V_Parall_" + str(file_no)+ ".npy"
-        PAR = np.load(file_name)
-        v_paral += list(PAR)
-        
-        file_name = file_name_location + "/V_Perp_" + str(file_no)+ ".npy"
-        PER = np.load(file_name)
-        v_perp += list(PER)
-
-    
-    Final_K_X = np.array(major_axis)
-    del(major_axis)
-    gc.collect()
-
-    print("{:e}".format(len(Final_K_X)))  
-
-    Final_K_Y = np.array(minor_axis)
-    del(minor_axis)
-    gc.collect()
-
-    Final_K_Z = np.array(propagation_axis)
-    del(propagation_axis)
-    gc.collect()
-
-    # sorted_file_name_location = "/mpdata/becker/yoge8051/Research/TDSE/Monte_Carlo/Data/Circular/New/500nm/Plus"
+        file_name = file_name_location + \
+            "/Final_Mom_Y_Axis_" + str(file_no) + ".npy"
+        v_perp.extend(np.load(file_name))
 
     phase_array = np.array(phase_array)
-    v_perp = np.array(v_perp)
     v_paral = np.array(v_paral)
+    v_perp = np.array(v_perp)
 
-    # v_paral = np.load(sorted_file_name_location + "/Int_K_Parl.npy")
-    # gc.collect()
-    
-    
-    # PAD(Final_K_X, Final_K_Y, Final_K_Z, phase_array, "PAD-Ell-71-500-E-Plus")
-    # exit()
-    # PAD(major_axis_tau, minor_axis_tau, propagation_axis_tau, phase_array, "PAD_NA_Linear_Hydrogen.png")
-    
-    
- 
-
-    Final_K, Final_K2 = sqrt(Final_K_X**2 + Final_K_Y**2 + Final_K_Z**2), sqrt(Final_K_X**2 + Final_K_Y**2)
-   
-    Final_Thetha, Final_Phi = np.arctan2(Final_K2, Final_K_Z), np.arctan2(Final_K_Y, Final_K_X) 
-
-    phi_negative_idx = np.where(Final_Phi < 0)[0]
-    Final_Phi[phi_negative_idx] += 2*pi
-    
-    del(Final_K_X, Final_K_Y, Final_K_Z, Final_K2)
+    Final_K_X = np.array(v_paral)
     gc.collect()
 
-    # PAD_Energy_Angle(Final_K, Final_Phi, Final_Thetha, phase_array)
-    # exit()
+    print("{:e}".format(len(Final_K_X)))
 
+    Final_K_Y = np.array(v_perp)
+    gc.collect()
+
+    Final_K_Z = np.array(v_paral)
+    gc.collect()
+
+    Final_K = np.sqrt(Final_K_X ** 2 + Final_K_Y ** 2 + Final_K_Z ** 2)
+    Final_K2 = np.sqrt(Final_K_X ** 2 + Final_K_Y ** 2)
+
+    Final_Thetha = np.arctan2(Final_K2, Final_K_Z)
+    Final_Phi = np.arctan2(Final_K_Y, Final_K_X)
+    Final_Phi[Final_Phi < 0] += 2 * np.pi
+
+    gc.collect()
 
     print("Finished")
     k_peaks = PAD_Integrated_New(Final_K, Final_Phi, Final_Thetha, phase_array)
-    
-    # PAD_K_VS_X(Final_K, Final_Phi, Final_Thetha, T_Of_Ion, phase_array)
-    
-    displacment_array, time_of_fligh, L  = None, None, None
 
-    ATI_Peak_Plots(Final_K, Final_Phi, Final_Thetha, phase_array, k_peaks, v_paral, v_perp, displacment_array, time_of_fligh, L)
-    
+    displacment_array, time_of_fligh, L = None, None, None
 
-
-    # phi_index = np.linspace(0,2*pi, 1000)
-    # for k in peaks[:5]:
-    #     x = k*np.cos(phi_index)
-    #     y = k*np.sin(phi_index)
-
-    #     plt.scatter(x, y, color='green', s = 3)
-
-    # PAD(major_axis_tau, minor_axis_tau, propagation_axis_tau, phase_array, "PAD_Ell_Pulse_10_Cycles5.png")
+    ATI_Peak_Plots(
+        Final_K, Final_Phi, Final_Thetha, phase_array, k_peaks, v_paral, v_perp, displacment_array, time_of_fligh, L
+    )
